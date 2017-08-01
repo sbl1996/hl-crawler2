@@ -15,3 +15,5 @@ val _okhttp = Seq(
   "com.squareup.okhttp3" % "okhttp" % okHttpVersion,
   "com.squareup.okhttp3" % "okhttp-urlconnection" % okHttpVersion
 )
+
+libraryDependencies ++= _okhttp

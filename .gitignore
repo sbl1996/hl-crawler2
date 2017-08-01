@@ -383,3 +383,5 @@ gradle-app.setting
 hs_err_pid*
 
 target/
+
+src/main/scala/FeatureTest.sc
