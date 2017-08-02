@@ -1,3 +1,5 @@
+package haishu.crawler2
+
 import java.net.Proxy
 
 case class RequestMeta(

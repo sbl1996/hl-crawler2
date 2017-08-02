@@ -1,8 +1,10 @@
+package haishu.crawler2
+
 import java.nio.charset.Charset
 
 case class Request(
     url: String,
-    callback: Response => Seq[Either[Request, Any]],
+    callback: Response => Seq[Either[Request, Item]],
     method: String = "GET",
     headers: Map[String, String] = Map(),
     body: Array[Byte] = Array(),

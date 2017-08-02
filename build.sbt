@@ -16,4 +16,12 @@ val _okhttp = Seq(
   "com.squareup.okhttp3" % "okhttp-urlconnection" % okHttpVersion
 )
 
+val _scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2"
+
+val _commonsLang3 = "org.apache.commons" % "commons-lang3" % "3.6"
+
 libraryDependencies ++= _okhttp
+
+libraryDependencies += _scalaLogging
+
+libraryDependencies += _commonsLang3

@@ -1,9 +1,11 @@
+package haishu.crawler2
+
 import java.io.IOException
 import java.nio.charset.Charset
 import java.util.concurrent.TimeUnit
 
 import Messages.Download
-import akka.actor.Actor
+import akka.actor.{Actor, Props}
 import okhttp3.{Call, Callback, Headers, MediaType, OkHttpClient, RequestBody, Request => OkRequest, Response => OkResponse}
 
 import scala.collection.JavaConverters._
@@ -13,21 +15,29 @@ import scala.util.{Failure, Success}
 class OkHttpDownloader(client: OkHttpClient) extends Actor {
 
   import OkHttpDownloader._
+  import context.dispatcher
+
+  val log = context.system.log
 
   override def receive = {
     case Download(request) =>
       val result = download(client, request)
+      val engine = sender()
       result onComplete {
         case Success(response) =>
-          sender() ! response
+          log.info(s"downloading page success ${request.url}")
+          engine ! response
         case Failure(e) =>
-          sender() ! akka.actor.Status.Failure(e)
+          log.warning(s"download page ${request.url} error", e)
+          engine ! akka.actor.Status.Failure(e)
       }
   }
 
 }
 
 object OkHttpDownloader {
+
+  def props(client: OkHttpClient) = Props(new OkHttpDownloader(client))
 
   def download(client: OkHttpClient, request: Request): Future[Response] = {
     val okRequest = convertRequest(request)
@@ -69,7 +79,7 @@ object OkHttpDownloader {
   }
 
   def convertResponse(okResponse: OkResponse, request: Request): Response = {
-    val charset = Option(okResponse.body().contentType()).map(_.charset())
+    val charset = Option(okResponse.body().contentType()).flatMap(m => Option(m.charset()))
 
     var headers = Map[String, Seq[String]]()
     for (n <- okResponse.headers().names().asScala) {

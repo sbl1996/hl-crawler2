@@ -1,3 +1,5 @@
+package haishu.crawler2
+
 import java.net.{MalformedURLException, URL}
 
 object UrlUtils {
