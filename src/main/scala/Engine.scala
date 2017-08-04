@@ -2,8 +2,9 @@ package haishu.crawler2
 
 import Messages.{Download, PollRequest}
 import Scheduler.NoRequest
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, Cancellable, Props}
 import okhttp3.OkHttpClient
+
 import scala.concurrent.duration._
 
 object Engine {
@@ -45,9 +46,18 @@ class Engine(pipelines: Seq[Pipeline])(implicit client: OkHttpClient) extends Ac
     context.actorOf(ItemPipeline.props(p), p.toString)
   }
 
-  val timer = system.scheduler.schedule(200.millis, 200.millis, scheduler, PollRequest)
+  var timer: Cancellable = _
 
   var noRequestTimes = 0
+
+  override def preStart() = {
+    timer = system.scheduler.schedule(200.millis, 200.millis, scheduler, PollRequest)
+  }
+
+  override def postStop() = {
+    timer.cancel()
+    log.debug(s"Job ${self.path.name} complete")
+  }
 
   def receive = {
     case ScheduleRequest(request) =>
@@ -56,14 +66,14 @@ class Engine(pipelines: Seq[Pipeline])(implicit client: OkHttpClient) extends Ac
        downloader ! Download(request)
     case NoRequest =>
       noRequestTimes += 1
-      if (noRequestTimes >= 10) timer.cancel()
+      if (noRequestTimes >= 10) context.stop(self)
     case r: Response =>
       spider ! ParseResponse(r)
     case ProcessItem(item) =>
       itemPipelines.headOption.foreach(_ ! ProcessItem(item))
     case ProcessItemNext(item) =>
-      val prevIndex = itemPipelines.indexOf(sender())
-      itemPipelines(prevIndex + 1) ! ProcessItem(item)
+      val nextIndex = itemPipelines.indexOf(sender()) + 1
+      if (nextIndex < pipelines.length) itemPipelines(nextIndex) ! ProcessItem(item)
   }
 
 }

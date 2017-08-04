@@ -5,7 +5,7 @@ import haishu.crawler2.{ConsolePipeline, Engine, Item, Response}
 import haishu.crawler2.Engine.ScheduleRequest
 import okhttp3.OkHttpClient
 
-object Main extends App {
+object Main {
 
   implicit val system = ActorSystem("crawler")
 
@@ -16,7 +16,7 @@ object Main extends App {
     job.startRequests.foreach(r => engine ! ScheduleRequest(r))
   }
 
-  case class Article(title: String, content: String) extends Item
+  case class Article(title: String, content: String)
 
   class ZxfbJob extends SimpleJob {
 
@@ -26,29 +26,28 @@ object Main extends App {
       "http://www.stats.gov.cn/tjsj/zxfb/"
     )
 
-    override val pipelines = Seq(new ConsolePipeline)
-
     def parse(r: Response) = {
 
-      val s = r.css(".center_list")
+      val links = r.css(".center_list").links().regex(""".*\d{8}_\d{7}.html$""").all().map(r.follow(_, parseItem))
 
-      val links = s.links().all()
+      send(links)
 
-      println(links)
+    }
 
+    def parseItem(r: Response) = {
       val article = for {
         title <- r.css(".xilan_tit", "text").get()
         content <- r.css(".TRS_Editor").get()
       } yield Article(title, content)
-
-      result(links) ++ result(article)
-
+      article match {
+        case None => println(r.request.url)
+        case Some(a) => println(a.title)
+      }
+      result(article)
     }
 
   }
 
   def submit(j: SimpleJob): Unit = submit(j.build())
-
-  submit(new ZxfbJob)
 
 }

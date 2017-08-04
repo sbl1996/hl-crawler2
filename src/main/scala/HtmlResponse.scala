@@ -13,7 +13,7 @@ case class HtmlResponse(
 
   private lazy val text = new String(body, encoding.getOrElse(Charset.defaultCharset()))
 
-  private lazy val html = Html(text)
+  private lazy val html = Html(text, request.url)
 
   override def css(query: String): Selectable = html.css(query)
 

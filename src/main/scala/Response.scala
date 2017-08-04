@@ -1,6 +1,7 @@
 package haishu.crawler2
 
 import java.nio.charset.Charset
+import scala.collection.immutable
 
 import UrlUtils.canonicalizeUrl
 import haishu.crawler2.selector.Selectable
@@ -29,7 +30,7 @@ trait Response {
 
   def follow(
       url: String,
-      callback: Response => Seq[Either[Request, Item]] = request.callback,
+      callback: Response => immutable.Seq[Either[Request, Item]] = request.callback,
       method: String = "GET",
       headers: Map[String, String] = request.headers,
       body: Array[Byte] = Array(),

@@ -21,7 +21,7 @@ class OkHttpDownloader(client: OkHttpClient) extends Actor {
 
   override def receive = {
     case Download(request) =>
-      val result = download(client, request)
+      val result = downloadAsync(client, request)
       val engine = sender()
       result onComplete {
         case Success(response) =>
@@ -39,7 +39,7 @@ object OkHttpDownloader {
 
   def props(client: OkHttpClient) = Props(new OkHttpDownloader(client))
 
-  def download(client: OkHttpClient, request: Request): Future[Response] = {
+  def downloadAsync(client: OkHttpClient, request: Request): Future[Response] = {
     val okRequest = convertRequest(request)
     val thisClient = buildClient(request.meta, client)
     val promise = Promise[Response]()
@@ -53,6 +53,13 @@ object OkHttpDownloader {
       }
     })
     promise.future
+  }
+
+  def download(client: OkHttpClient, request: Request): Response = {
+    println(s"downloading ${request.url}")
+    val okRequest = convertRequest(request)
+    val thisClient = buildClient(request.meta, client)
+    convertResponse(thisClient.newCall(okRequest).execute(), request)
   }
 
   def buildClient(meta: RequestMeta, client: OkHttpClient) = {

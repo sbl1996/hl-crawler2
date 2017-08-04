@@ -18,11 +18,9 @@ class LinksSelector extends BaseElementSelector {
     val elements = element.select("a")
     elements.asScala.map { elem =>
       if (StringUtil.isBlank(elem.baseUri())) {
-        println(elem.attr("abs:href"))
         elem.attr("abs:href")
       }
       else {
-        println(elem.attr("href"))
         elem.attr("href")
       }
     }

@@ -1,10 +1,11 @@
 package haishu.crawler2
 
 import java.nio.charset.Charset
+import scala.collection.immutable
 
 case class Request(
     url: String,
-    callback: Response => Seq[Either[Request, Item]],
+    callback: Response => immutable.Seq[Either[Request, Item]],
     method: String = "GET",
     headers: Map[String, String] = Map(),
     body: Array[Byte] = Array(),

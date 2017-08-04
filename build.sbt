@@ -8,6 +8,8 @@ val akkaVersion = "2.5.3"
 
 libraryDependencies += "com.typesafe.akka" %% "akka-actor" % akkaVersion
 
+libraryDependencies += "com.typesafe.akka" %% "akka-stream" % akkaVersion
+
 libraryDependencies += "org.jsoup" % "jsoup" % "1.10.3"
 
 val okHttpVersion = "3.8.1"
