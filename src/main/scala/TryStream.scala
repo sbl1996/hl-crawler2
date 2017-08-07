@@ -1,10 +1,45 @@
 import java.awt.print.PrinterIOException
-import java.util.concurrent.TimeoutException
+import java.util.concurrent.{LinkedBlockingDeque, TimeUnit, TimeoutException}
 import java.util.concurrent.atomic.AtomicReference
 
 import akka.stream.OverflowStrategy
+import haishu.crawler2.Request
 
-object TryStream extends App {
+import scala.collection.mutable
+import scala.concurrent.{ExecutionContext, Future, blocking}
+
+object TryStream {
+
+  class StreamScheduler {
+
+    private val queue = new LinkedBlockingDeque[Request]()
+
+    private val seen = mutable.Set[Request]()
+
+    private val defaultTimeout = 10
+
+    private val defaultTimeUnit = TimeUnit.SECONDS
+
+    def poll(timeout: Long = defaultTimeout, unit: TimeUnit = defaultTimeUnit) = {
+      val result = queue.poll(timeout, unit)
+      if (result == null) throw new TimeoutException(s"Scheduler can not get new request after $timeout $unit")
+      else result
+    }
+
+    def pollAsync()(implicit ec: ExecutionContext) = Future {
+      blocking {
+        poll()
+      }
+    }
+
+    def add(request: Request) = {
+      if (!seen.contains(request)) {
+        seen += request
+        queue.add(request)
+      }
+    }
+  }
+
 
   import akka.NotUsed
   import akka.actor.ActorSystem
@@ -114,7 +149,7 @@ object TryStream extends App {
     val filterRequest = Flow[ParseResult].mapConcat[Request] { result =>
       result.collect {
         case Left(request) =>
-          println(request)
+          println(request.url)
           request
       }
     }.named("filterRequest")
@@ -130,10 +165,10 @@ object TryStream extends App {
     val g = RunnableGraph.fromGraph(GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
       import GraphDSL.Implicits._
       val start = Source(job.startRequests.toList)
-      val concat = builder.add(Concat[Request](2))
+      val concat = builder.add(MergePreferred[Request](1))
       val bcast = builder.add(Broadcast[ParseResult](2))
       val checkFlow = Flow[Request].map(checker.check).collect {
-        case Some(r) => r
+        case Some(r) => println(r); r
       }
 
       def pipelineToFlow(pipeline: Pipeline) = {
@@ -146,8 +181,8 @@ object TryStream extends App {
         if (job.pipeliens.isEmpty) Flow[Item].map(identity)
         else job.pipeliens.map(pipelineToFlow).reduce(_ via _)
 
-      start ~> concat ~> checkFlow ~> downloadFlow ~> parseFlow ~> bcast ~> filterItem ~> pipelineFlows ~> Sink.ignore
-               concat <~ Flow[Request].buffer(20, OverflowStrategy.dropHead) <~ filterRequest <~ bcast
+      start ~> concat ~> Flow[Request].buffer(20, OverflowStrategy.dropNew) ~> checkFlow ~> downloadFlow ~> parseFlow ~> bcast ~> filterItem ~> pipelineFlows ~> Sink.ignore
+               concat.preferred <~ filterRequest <~ bcast
       ClosedShape
     })
 

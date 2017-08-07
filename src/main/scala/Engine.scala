@@ -35,7 +35,7 @@ class Engine(pipelines: Seq[Pipeline])(implicit client: OkHttpClient) extends Ac
 
   val log = system.log
 
-  val scheduler = context.actorOf(Scheduler.props, "scheduler")
+  val scheduler = context.actorOf(Scheduler.props(self), "scheduler")
 
   val spider = context.actorOf(Spider.props, "spider")
 
@@ -62,13 +62,17 @@ class Engine(pipelines: Seq[Pipeline])(implicit client: OkHttpClient) extends Ac
   def receive = {
     case ScheduleRequest(request) =>
       scheduler ! request
+
     case ReplyRequest(request) =>
+      noRequestTimes = 0
        downloader ! Download(request)
     case NoRequest =>
       noRequestTimes += 1
       if (noRequestTimes >= 10) context.stop(self)
+
     case r: Response =>
       spider ! ParseResponse(r)
+
     case ProcessItem(item) =>
       itemPipelines.headOption.foreach(_ ! ProcessItem(item))
     case ProcessItemNext(item) =>

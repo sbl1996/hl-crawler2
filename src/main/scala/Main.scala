@@ -5,7 +5,7 @@ import haishu.crawler2.{ConsolePipeline, Engine, Item, Response}
 import haishu.crawler2.Engine.ScheduleRequest
 import okhttp3.OkHttpClient
 
-object Main {
+object Main extends App {
 
   implicit val system = ActorSystem("crawler")
 
@@ -49,5 +49,7 @@ object Main {
   }
 
   def submit(j: SimpleJob): Unit = submit(j.build())
+
+  submit(new ZxfbJob)
 
 }

@@ -5,7 +5,7 @@ import java.util.concurrent.{BlockingQueue, LinkedBlockingDeque, TimeUnit, Timeo
 
 import Engine.ReplyRequest
 import Messages.PollRequest
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, ActorRef, Props}
 
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
@@ -13,16 +13,17 @@ import scala.concurrent.duration._
 import scala.util.Try
 import scala.util.control.NonFatal
 import scala.concurrent.blocking
+import scala.collection.JavaConverters._
 
 object Scheduler {
 
   case object NoRequest
 
-  def props = Props(new Scheduler)
+  def props(engine: ActorRef) = Props(new Scheduler(engine))
 
 }
 
-class Scheduler extends Actor {
+class Scheduler(engine: ActorRef) extends Actor {
 
   import Scheduler.NoRequest
 
@@ -32,7 +33,7 @@ class Scheduler extends Actor {
 
   val seen = mutable.Set[Request]()
 
-  def poll = queue.poll(5, TimeUnit.SECONDS)
+  def poll() = queue.poll()
 
   override def receive = {
     case request: Request =>
@@ -42,42 +43,9 @@ class Scheduler extends Actor {
         queue.add(request)
       }
     case PollRequest =>
-      try {
-        val request = queue.poll()
-        sender() ! ReplyRequest(request)
-      } catch {
-        case _: NoSuchElementException =>
-          sender() ! NoRequest
-      }
-  }
-}
-
-class StreamScheduler {
-
-  private val queue = new LinkedBlockingDeque[Request]()
-
-  private val seen = mutable.Set[Request]()
-
-  private val defaultTimeout = 10
-
-  private val defaultTimeUnit = TimeUnit.SECONDS
-
-  def poll(timeout: Long = defaultTimeout, unit: TimeUnit = defaultTimeUnit) = {
-    val result = queue.poll(timeout, unit)
-    if (result == null) throw new TimeoutException(s"Scheduler can not get new request after $timeout $unit")
-    else result
-  }
-
-  def pollAsync()(implicit ec: ExecutionContext) = Future {
-    blocking {
-      poll()
-    }
-  }
-
-  def add(request: Request) = {
-    if (!seen.contains(request)) {
-      seen += request
-      queue.add(request)
-    }
+      val request = poll()
+      val engine = sender()
+      if (request != null) engine ! ReplyRequest(request)
+      else engine ! NoRequest
   }
 }

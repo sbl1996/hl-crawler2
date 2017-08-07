@@ -28,7 +28,7 @@ class OkHttpDownloader(client: OkHttpClient) extends Actor {
           log.info(s"downloading page success ${request.url}")
           engine ! response
         case Failure(e) =>
-          log.warning(s"download page ${request.url} error", e)
+          log.warning(s"download page error ${request.url}", e)
           engine ! akka.actor.Status.Failure(e)
       }
   }
@@ -56,7 +56,6 @@ object OkHttpDownloader {
   }
 
   def download(client: OkHttpClient, request: Request): Response = {
-    println(s"downloading ${request.url}")
     val okRequest = convertRequest(request)
     val thisClient = buildClient(request.meta, client)
     convertResponse(thisClient.newCall(okRequest).execute(), request)
@@ -71,7 +70,6 @@ object OkHttpDownloader {
   }
 
   def convertRequest(request: Request): OkRequest = {
-
     val okRequestBody = {
       val body = request.body
       if (body.isEmpty) null
