@@ -1,7 +1,7 @@
 import java.util.Date
 
 import akka.actor.{ActorRef, ActorSystem}
-import haishu.crawler2.{ConsolePipeline, Engine, Item, Response}
+import haishu.crawler2._
 import haishu.crawler2.Engine.ScheduleRequest
 import okhttp3.OkHttpClient
 
@@ -26,11 +26,13 @@ object Main extends App {
       "http://www.stats.gov.cn/tjsj/zxfb/"
     )
 
+    override val pipelines = Seq(SingleFilePipeline("/home/hldev/Shen/zxfb"))
+
     def parse(r: Response) = {
 
       val links = r.css(".center_list").links().regex(""".*\d{8}_\d{7}.html$""").all().map(r.follow(_, parseItem))
 
-      send(links)
+      collectRequests(links)
 
     }
 
@@ -38,12 +40,8 @@ object Main extends App {
       val article = for {
         title <- r.css(".xilan_tit", "text").get()
         content <- r.css(".TRS_Editor").get()
-      } yield Article(title, content)
-      article match {
-        case None => println(r.request.url)
-        case Some(a) => println(a.title)
-      }
-      result(article)
+      } yield Map("title" -> title, "content" -> content)
+      result(article.get)
     }
 
   }

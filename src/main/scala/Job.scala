@@ -14,16 +14,18 @@ trait SimpleJob {
 
   type ParseResult = immutable.Seq[Either[Request, Item]]
 
-  def result(urls: Seq[String]): ParseResult =
+  def collectUrls(urls: Seq[String]): ParseResult =
     urls.map(url => Left(Request(url, parse))).toList
 
-  def result(urls: Seq[String], callback: Response => ParseResult): ParseResult =
+  def collectUrls(urls: Seq[String], callback: Response => ParseResult): ParseResult =
     urls.map(url => Left(Request(url, callback))).toList
 
-  def send(requests: Seq[Request]): ParseResult =
+  def collectRequests(requests: Seq[Request]): ParseResult =
     requests.map(Left(_)).toList
 
   def result(item: Item): ParseResult = List(Right(item))
+
+  def result[T](m: Map[String, T]): ParseResult = List(Right(MapItem(m)))
 
   def result(p: Product): ParseResult = List(Right(ProductItem(p)))
 
